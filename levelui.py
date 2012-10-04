@@ -8,10 +8,11 @@ import tkMessageBox
 import threading
 import operator
 
-class TorpedoAlleyUI(threading.Thread):
-	def __init__(self, queue):
+class LevelUI(threading.Thread):
+	def __init__(self, level_number, in_queue, out_queue):
 		threading.Thread.__init__(self)
-		self.queue = queue
+		self.in_queue = in_queue
+		self.out_queue = out_queue
 		self.start()
 	def run(self):
 		self.root=Tk()
@@ -46,7 +47,7 @@ class TorpedoAlleyUI(threading.Thread):
 
 	def destroy_confirm(self):
 		if tkMessageBox.askokcancel("Quit", "Do you really wish to quit?"):
-			self.queue.put("quit")
+			self.out_queue.put("quit")
 			self.root.destroy()
 
 	def keyPressed(self, event):
@@ -55,7 +56,7 @@ class TorpedoAlleyUI(threading.Thread):
 				self.stopped = False
 				self.steer(event.keysym)
 
-		self.queue.put(event.keysym)
+		self.out_queue.put(event.keysym)
 
 	def keyReleased(self, event):
 		if event.keysym in self.directions:
