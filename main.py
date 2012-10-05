@@ -23,6 +23,7 @@ class TorpedoAlley:
 		self.states = {
 			"menu": [Menu],
 			"level1": [Level, 1],
+			"level2": [Level, 2],
 			"exit": [Exit]
 		}
 
@@ -31,7 +32,13 @@ class TorpedoAlley:
 				"start": "level1",
 				"quit": "exit"
 			},
-			"level1": { "quit": "exit" }
+			"level1": {
+				"complete": "level2",
+				"quit": "exit" 
+			},
+			"level2": {
+				"quit": "exit" 
+			}
 		}
 
 		self.total_score = 0
@@ -58,6 +65,7 @@ class TorpedoAlley:
 				event = self.in_queue.get_nowait()
 
 				if event in self.current_transitions():
+					self.out_queue.put("close")
 					self.total_score += self._current_state.score
 					self.change_state(event)
 					self.build_ui()
@@ -102,11 +110,15 @@ class Level:
 			# for now, we simply notify the UI to launch it
 			self.out_queue.put(event)
 		elif re.match(r'hit (\d+)', event):
-			self.score += self.score_per_ship
-			print "Score: %d" % self.score
+			self.increase_score()
 			self.out_queue.put(event)
 		else:
 			print event
+
+	def increase_score(self):
+		self.score += self.score_per_ship
+		self.out_queue.put("score %d" % self.score)
+
 
 	def ship_appearance(self):
 		self.out_queue.put("ship")
@@ -120,8 +132,10 @@ class Level:
 			self.ship_timer = Timer(nextTime, self.ship_appearance, ())
 			self.ship_timer.start()
 		else:
-			print "Level complete!"
+			self.level_complete()
 
+	def level_complete(self):
+		self.out_queue.put("complete")
 
 class Exit:
 	# dummy method, will exit

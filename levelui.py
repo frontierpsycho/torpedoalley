@@ -32,6 +32,15 @@ class LevelUI(threading.Thread):
 		self.canvas.focus_set()
 		self.canvas.pack()
 
+		# create the status panel
+		self.status_panel = Frame(self.root, width=800, height=30)
+		self.status_panel.pack()
+
+		self.score_text = StringVar()
+		self.score_text.set("Score: 0")
+		score_label = Label(self.status_panel, textvariable=self.score_text)
+		score_label.pack()
+
 		# create the sea
 		self.sea = self.canvas.create_rectangle(0, 200, 800, 600, fill="blue")
 		# and the sky
@@ -46,7 +55,8 @@ class LevelUI(threading.Thread):
 		# these keypresses are forwarded to steer, the rest go to the game loop
 		self.directions = ["Left", "Right", "Up", "Down"]
 
-		self.stopped = True
+		self.stopped = True # submarine starts stopped
+		self.completed = False # level not completed
 
 		self.check_input()
 
@@ -65,9 +75,23 @@ class LevelUI(threading.Thread):
 					self.destroy_ship(int(m.group(1)))
 				except ValueError:
 					pass
+			elif re.match(r'score (\d+)', event):
+				m = re.match(r'score (\d+)', event)
+				try:
+					self.set_score(int(m.group(1)))
+				except ValueError:
+					pass
+			elif event == "complete":
+				self.completed = True
 		except Empty:
 			pass
 		self.root.after(5, self.check_input)
+	
+	def set_score(self, score):
+		self.score_text.set("Score: %d" % score)
+
+	def level_complete(self):
+		self.canvas.create_text(400,300, text="Level complete!", fill="white", font=("Arial", 16, "bold"))
 
 	def destroy_confirm(self):
 		if tkMessageBox.askokcancel("Quit", "Do you really wish to quit?"):
@@ -147,6 +171,8 @@ class LevelUI(threading.Thread):
 
 		if ship_id not in self.canvas.find_overlapping(*self.canvas.coords(self.sky)):
 			self.canvas.delete(ship_id)
+			if self.completed and not self.canvas.find_withtag("ship"):
+				self.level_complete()
 		else:
 			self.root.after(30, self.move_ship, ship_id, speed)
 
@@ -197,3 +223,5 @@ class LevelUI(threading.Thread):
 
 	def destroy_ship(self, ship_id):
 		self.canvas.delete(ship_id)
+		if self.completed and not self.canvas.find_withtag("ship"):
+			self.level_complete()
