@@ -130,8 +130,6 @@ class LevelUI(threading.Thread):
 		# get difference of destination coordinates from center coordinates
 		tx, ty = [float(dest_coords[0]-torpedo_center[0]), float(dest_coords[1]-torpedo_center[1])]
 		
-		tan = ty/tx
-
 		# dx, dy and desired speed form a right triangle
 		return graphics_helpers.deltas_for_speed(7, tx, ty)
 
