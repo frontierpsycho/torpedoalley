@@ -26,17 +26,12 @@ class TorpedoAlley:
 		self._current_state = Level(1)
 
 		self.states = {
-			"menu": [Menu],
 			"level1": [Level, 1],
 			"level2": [Level, 2],
 			"exit": [Exit]
 		}
 
 		self._transitions = {
-			"menu": {
-				"start": "level1",
-				"quit": "exit"
-			},
 			"level1": {
 				"complete": "level2",
 				"quit": "exit" 
