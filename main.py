@@ -73,7 +73,7 @@ class Menu:
 class Level:
 	def __init__(self, level_number):
 		self.level_number = level_number
-		self.ship_rate = 1.0/2.0
+		self.ship_rate = 1.0/3.0
 		self.ship_timer = Timer(-math.log(random.random())/self.ship_rate, self.ship_appearance, ())
 
 	def cleanup(self):
@@ -93,6 +93,9 @@ class Level:
 		if re.match(r'launch (\d+),(\d+)', event):
 			# torpedo launched, we could throttle number here or somesuch
 			# for now, we simply notify the UI to launch it
+			self.out_queue.put(event)
+		elif re.match(r'hit (\d+)', event):
+			# TODO increase score, perhaps delete ship
 			self.out_queue.put(event)
 		else:
 			print event

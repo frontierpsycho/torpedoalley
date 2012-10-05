@@ -56,6 +56,12 @@ class LevelUI(threading.Thread):
 				self.launch(event)
 			elif re.match(r'ship', event):
 				self.ship()
+			elif re.match(r'hit (\d+)', event):
+				m = re.match(r'hit (\d+)', event)
+				try:
+					self.destroy_ship(int(m.group(1)))
+				except ValueError:
+					pass
 		except Empty:
 			pass
 		self.root.after(5, self.check_input)
@@ -115,6 +121,14 @@ class LevelUI(threading.Thread):
 
 		if self.check_underwater(torpedo_id):
 			self.canvas.move(torpedo_id, dx, dy)
+			
+			# detect if torpedo hit ship
+			overlapping_objects = set(self.canvas.find_overlapping(*self.canvas.coords(torpedo_id)))
+			ships = set(self.canvas.find_withtag("ship"))
+			overlapping_ships = overlapping_objects & ships
+			if overlapping_ships:
+				self.out_queue.put("hit %d" % overlapping_ships.pop())
+
 			self.root.after(50, self.move_torpedo, *[torpedo_id, dx, dy])
 		else:
 			# if torpedo left the sea, delete it
@@ -123,10 +137,8 @@ class LevelUI(threading.Thread):
 	def move_ship(self, ship_id, speed):
 		self.canvas.move(ship_id, speed, 0)
 
-
 		if ship_id not in self.canvas.find_overlapping(*self.canvas.coords(self.sky)):
 			self.canvas.delete(ship_id)
-			print "Ship deleted."
 		else:
 			self.root.after(30, self.move_ship, ship_id, speed)
 
@@ -174,3 +186,6 @@ class LevelUI(threading.Thread):
 	def ship(self):
 		ship_id = self.canvas.create_rectangle(-99, 175, 1, 200, fill="red", tags="ship")
 		self.move_ship(ship_id, 2)
+
+	def destroy_ship(self, ship_id):
+		self.canvas.delete(ship_id)
