@@ -13,26 +13,33 @@ class TorpedoAlley:
 		self.out_queue = Queue()
 		
 		# application states and transitions
-		self._current_state = "level1"
+		self._current_state_name = "level1"
+		self._current_state = Level(1)
+
 		self.states = {
-			"menu": Menu(),
-			"level1": Level(1)
+			"menu": [Menu],
+			"level1": [Level, 1],
+			"exit": [Exit]
 		}
+
 		self._transitions = {
 			"menu": {
-				"start": "level1"
+				"start": "level1",
+				"quit": "exit"
 			},
-			"level1": { }
+			"level1": { "quit": "exit" }
 		}
 
-	def current_state(self):
-		return self.states[self._current_state]
+	def change_state(self, transition):
+		self._current_state.cleanup()
+		self._current_state_name = self.current_transitions()[transition]
+		self._current_state = self.states[self._current_state_name][0](*self.states[self._current_state_name][1:])
 
 	def current_transitions(self):
-		return self._transitions[self._current_state]
+		return self._transitions[self._current_state_name]
 
 	def build_ui(self):
-		self.ui = self.states[self._current_state].display(self.in_queue, self.out_queue)
+		self.ui = self._current_state.display(self.in_queue, self.out_queue)
 
 	def run(self):
 		quit = False
@@ -44,13 +51,14 @@ class TorpedoAlley:
 			try:
 				event = self.in_queue.get_nowait()
 
-				if event == "quit":
-					quit = True
-				elif event in self.current_transitions():
-					self._current_state = self.current_transitions()[event]
+				if event in self.current_transitions():
+					self.change_state(event)
 					self.build_ui()
 				else:
-					self.current_state().handle(event)
+					self._current_state.handle(event)
+
+				if event == "quit":
+					quit = True
 			except Empty:
 				pass
 
