@@ -9,11 +9,15 @@ import tkMessageBox
 
 import threading
 import operator
-
 import math
 import re
+import logging
+import logging.config
 
 import graphics_helpers
+
+logging.config.fileConfig('logs/logging.conf')
+logger = logging.getLogger('ui')
 
 class LevelUI(threading.Thread):
 	def __init__(self, level_number, in_queue, out_queue, starting_score=0):
@@ -60,8 +64,10 @@ class LevelUI(threading.Thread):
 		self.stopped = True # submarine starts stopped
 		self.completed = False # level not completed
 
-		self.check_input()
+		logger.debug("UI built, entering loops")
 
+		self.check_input()
+		
 		self.root.mainloop()
 
 	def check_input(self):
@@ -187,7 +193,7 @@ class LevelUI(threading.Thread):
 			dx, dy = (0, speed)
 		else:
 			# panic! Just kidding.
-			print "Received", direction,"and don't know how to handle it!"
+			logger.error("Received %s and don't know how to handle it!" % direction)
 	
 		self.canvas.move(self.submarine, dx, dy)
 		if not self.check_underwater(self.submarine):

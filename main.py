@@ -9,7 +9,12 @@ import re
 import random
 import time
 import math
+import logging
+import logging.config
 from threading import Timer
+
+logging.config.fileConfig('logs/logging.conf')
+logger = logging.getLogger('main')
 
 class TorpedoAlley:
 	def __init__(self):
@@ -43,6 +48,8 @@ class TorpedoAlley:
 
 		self.total_score = 0
 
+		logger.debug("TorpedoAlley created")
+
 	def change_state(self, transition):
 		self._current_state.cleanup()
 		self._current_state_name = self.current_transitions()[transition]
@@ -63,12 +70,14 @@ class TorpedoAlley:
 		while not quit:
 			try:
 				event = self.in_queue.get_nowait()
+				logger.debug("Received event: %s" % str(event))
 
 				if event in self.current_transitions():
 					self.out_queue.put("close")
 					self.total_score += self._current_state.score
 					self.change_state(event)
 					self.build_ui()
+					logger.debug("Transitioned to state %s" % self._current_state_name)
 				else:
 					self._current_state.handle(event)
 
@@ -76,6 +85,8 @@ class TorpedoAlley:
 					quit = True
 			except Empty:
 				pass
+
+		logger.debug("TorpedoAlley terminated.")
 
 # state logic
 class Menu:
@@ -91,7 +102,10 @@ class Level:
 		self.score = 0
 		self.score_per_ship = 50*self.level_number
 
+		logger.debug("Level %d created." % level_number)
+
 	def cleanup(self):
+		logger.debug("Cleaning up level %d" % self.level_number)
 		self.ship_timer.cancel()
 
 	def display(self, in_queue, out_queue):
@@ -102,18 +116,24 @@ class Level:
 		# schedule random ship appearances
 		self.ship_timer.start()
 
+		logger.debug("UI built for level %d" % self.level_number)
+
 		return ui
 
 	def handle(self, event):
 		if re.match(r'launch (\d+),(\d+)', event):
+			logger.debug("Torpedo launched")
+
 			# torpedo launched, we could throttle number here or somesuch
 			# for now, we simply notify the UI to launch it
 			self.out_queue.put(event)
 		elif re.match(r'hit (\d+)', event):
 			self.increase_score()
+			logger.debug("Hit! Score is %d" % self.score)
+
 			self.out_queue.put(event)
 		else:
-			print event
+			logger.debug("Received unhandled event: %s" % str(event))
 
 	def increase_score(self):
 		self.score += self.score_per_ship
@@ -121,6 +141,7 @@ class Level:
 
 
 	def ship_appearance(self):
+		logger.debug("A new ship appears.")
 		self.out_queue.put("ship")
 
 		self.number_of_ships += 1
@@ -132,9 +153,11 @@ class Level:
 			self.ship_timer = Timer(nextTime, self.ship_appearance, ())
 			self.ship_timer.start()
 		else:
+			logger.debug("All ships arrived")
 			self.level_complete()
 
 	def level_complete(self):
+		logger.debug("Level complete")
 		self.out_queue.put("complete")
 
 class Exit:
