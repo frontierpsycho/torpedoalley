@@ -141,7 +141,9 @@ class LevelUI(threading.Thread):
 
 	### member functions that send events to the main loop ###
 	def launch_send(self, mouseclick):
-		self.out_queue.put("launch %d,%d" % (mouseclick.x, mouseclick.y))
+		if mouseclick.y < self.canvas.coords(self.submarine)[1]:
+			# only destinations over the sub are valid
+			self.out_queue.put("launch %d,%d" % (mouseclick.x, mouseclick.y))
 
 	### member functions that display events received from the main loop ###
 	def launch(self, event):
