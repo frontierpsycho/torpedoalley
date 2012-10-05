@@ -6,6 +6,9 @@ except ImportError:
 from levelui import LevelUI
 
 import re
+import random
+import time
+from threading import Timer
 
 class TorpedoAlley:
 	def __init__(self):
@@ -69,11 +72,20 @@ class Menu:
 class Level:
 	def __init__(self, level_number):
 		self.level_number = level_number
+		self.ship_timer = Timer(0.1, self.possible_ship_appearance, ())
+
+	def cleanup(self):
+		self.ship_timer.cancel()
 
 	def display(self, in_queue, out_queue):
 		self.in_queue = in_queue
 		self.out_queue = out_queue
-		return LevelUI(self.level_number, out_queue, in_queue)
+		ui = LevelUI(self.level_number, out_queue, in_queue)
+
+		# schedule random ship appearances
+		self.ship_timer.start()
+
+		return ui
 
 	def handle(self, event):
 		if re.match(r'launch (\d+),(\d+)', event):
@@ -82,6 +94,14 @@ class Level:
 			self.out_queue.put(event)
 		else:
 			print event
+
+	def possible_ship_appearance(self):
+		# TODO use level
+		if random.random() < 0.05:
+			self.out_queue.put("ship")
+
+		self.ship_timer = Timer(0.2, self.possible_ship_appearance, ())
+		self.ship_timer.start()
 
 class Exit:
 	# dummy method, will exit

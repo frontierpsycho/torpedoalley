@@ -54,6 +54,8 @@ class LevelUI(threading.Thread):
 			event = self.in_queue.get_nowait()
 			if re.match(r'launch (\d+),(\d+)', event):
 				self.launch(event)
+			elif re.match(r'ship', event):
+				self.ship()
 		except Empty:
 			pass
 		self.root.after(5, self.check_input)
@@ -118,6 +120,16 @@ class LevelUI(threading.Thread):
 			# if torpedo left the sea, delete it
 			self.canvas.delete(torpedo_id)
 
+	def move_ship(self, ship_id, speed):
+		self.canvas.move(ship_id, speed, 0)
+
+
+		if ship_id not in self.canvas.find_overlapping(*self.canvas.coords(self.sky)):
+			self.canvas.delete(ship_id)
+			print "Ship deleted."
+		else:
+			self.root.after(30, self.move_ship, ship_id, speed)
+
 	def steer(self, direction, speed=2):
 		if direction == "Left":
 			dx, dy = (-speed, 0)
@@ -158,3 +170,7 @@ class LevelUI(threading.Thread):
 		torpedo_id = self.canvas.create_oval(*torpedo_coords, fill="black")
 		
 		self.move_torpedo(torpedo_id, dx, dy)
+
+	def ship(self):
+		ship_id = self.canvas.create_rectangle(-99, 175, 1, 200, fill="red", tags="ship")
+		self.move_ship(ship_id, 2)
