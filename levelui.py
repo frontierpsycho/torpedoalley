@@ -1,12 +1,19 @@
 try:
 	from Tkinter import *
+	from Queue import Queue, Empty
 except ImportError:
 	from tkinter import *
+	from queue import Queue, Empty
 
 import tkMessageBox
 
 import threading
 import operator
+
+import math
+import re
+
+import graphics_helpers
 
 class LevelUI(threading.Thread):
 	def __init__(self, level_number, in_queue, out_queue):
@@ -21,29 +28,35 @@ class LevelUI(threading.Thread):
 		self.canvas = Canvas(self.root, width=800, height=600)
 		self.canvas.bind("<KeyPress>", self.keyPressed)
 		self.canvas.bind("<KeyRelease>", self.keyReleased)
-		self.canvas.bind("<Button-1>", self.launch)
+		self.canvas.bind("<Button-1>", self.launch_send)
 		self.canvas.focus_set()
 		self.canvas.pack()
 
 		# create the sea
-		sea = self.canvas.create_rectangle(0, 200, 800, 600, fill="blue")
+		self.sea = self.canvas.create_rectangle(0, 200, 800, 600, fill="blue")
 		# and the sky
-		sky = self.canvas.create_rectangle(0, 0, 800, 200, fill="cyan")
+		self.sky = self.canvas.create_rectangle(0, 0, 800, 200, fill="cyan")
 
 		# create submarine and keep it
 		self.submarine = self.canvas.create_rectangle(350, 383, 450, 412, fill="green")
-		self.torpedoes = []
 
-		self.directions = {
-			"Right": operator.add,
-			"Left": operator.sub,
-			"Down": operator.add,
-			"Up": operator.sub
-		}
-		
+		# these keypresses are forwarded to steer, the rest go to the game loop
+		self.directions = ["Left", "Right", "Up", "Down"]
+
 		self.stopped = True
 
+		self.check_input()
+
 		self.root.mainloop()
+
+	def check_input(self):
+		try:
+			event = self.in_queue.get_nowait()
+			if re.match(r'launch (\d+),(\d+)', event):
+				self.launch(event)
+		except Empty:
+			pass
+		self.root.after(5, self.check_input)
 
 	def destroy_confirm(self):
 		if tkMessageBox.askokcancel("Quit", "Do you really wish to quit?"):
@@ -62,30 +75,82 @@ class LevelUI(threading.Thread):
 		if event.keysym in self.directions:
 			self.stop_submarine()
 
-	def move_object(self, object, newx_topleft, newy_topleft, newx_bottomright, newy_bottomright):
-		self.canvas.coords(object, newx_topleft, newy_topleft, newx_bottomright, newy_bottomright)
+	def place_torpedo(self):
+		sub_coords = self.canvas.coords(self.submarine)
+
+		sub_height = math.ceil(math.fabs(sub_coords[3]-sub_coords[1]))
+		sub_coords[1] -= 10
+		sub_coords[3] -= sub_height
+
+		sub_width = math.ceil(math.fabs(sub_coords[0] - sub_coords[2])/2.0)
+
+		sub_coords[0] += sub_width - 5
+		sub_coords[2] -= sub_width - 5
+
+		return sub_coords
+
+	def torpedo_deltas(self, torpedo_coords, dest_coords):
+		torpedo_center = graphics_helpers.circle_center_from_bbox(5, torpedo_coords)
+
+		# get difference of destination coordinates from center coordinates
+		tx, ty = [float(dest_coords[0]-torpedo_center[0]), float(dest_coords[1]-torpedo_center[1])]
+		
+		tan = ty/tx
+
+		# dx, dy and desired speed form a right triangle
+		return graphics_helpers.deltas_for_speed(7, tx, ty)
+
+	### item movement functions ###
+	def check_underwater(self, object):
+		coords = self.canvas.coords(self.sea)
+		return (object in self.canvas.find_enclosed(*coords))
 
 	def stop_submarine(self):
 		self.stopped = True
 
-	def steer(self, direction, speed=2):
-		current_coords = self.canvas.coords(self.submarine)
-		if direction in ["Left", "Right"]:
-			current_coords[0] = self.directions[direction](current_coords[0], speed)
-			current_coords[2] = self.directions[direction](current_coords[2], speed)
-		elif direction in ["Up", "Down"]:
-			current_coords[1] = self.directions[direction](current_coords[1], speed)
-			current_coords[3] = self.directions[direction](current_coords[3], speed)
+	def move_torpedo(self, torpedo_id, dx, dy):
+		coords = self.canvas.coords(torpedo_id)
+
+		if self.check_underwater(torpedo_id):
+			self.canvas.move(torpedo_id, dx, dy)
+			self.root.after(50, self.move_torpedo, *[torpedo_id, dx, dy])
 		else:
-			# panic! Just kidding.
-			print "Received", direction,"and don't know how to handle it!"
+			# if torpedo left the sea, delete it
+			self.canvas.delete(torpedo_id)
 
-		self.move_object(self.submarine, *current_coords)
+	def steer(self, direction, speed=2):
+		if self.check_underwater(self.submarine):
+			if direction == "Left":
+				dx, dy = (-speed, 0)
+			elif direction == "Right":
+				dx, dy = (speed, 0)
+			elif direction == "Up":
+				dx, dy = (0, -speed)
+			elif direction == "Down":
+				dx, dy = (0, speed)
+			else:
+				# panic! Just kidding.
+				print "Received", direction,"and don't know how to handle it!"
+	
+			self.canvas.move(self.submarine, dx, dy)
+	
+			if not self.stopped:
+				self.root.after(30, self.steer, direction, speed)
 
-		if not self.stopped:
-			self.root.after(30, self.steer, direction, speed)
+	### member functions that send events to the main loop ###
+	def launch_send(self, mouseclick):
+		self.out_queue.put("launch %d,%d" % (mouseclick.x, mouseclick.y))
 
+	### member functions that display events received from the main loop ###
 	def launch(self, event):
-		self.torpedoes.append(self.canvas.create_oval(70, 15, 80, 25, fill="black"))
+		torpedo_coords = self.place_torpedo()
 
+		m = re.match(r'launch (?P<x>\d+),(?P<y>\d+)', event)
+		dest_coords = [int(m.group('x')), int(m.group('y'))]
 
+		# calculate deltas for movement towards desired direction
+		dx, dy = self.torpedo_deltas(torpedo_coords, dest_coords)
+
+		torpedo_id = self.canvas.create_oval(*torpedo_coords, fill="black")
+		
+		self.move_torpedo(torpedo_id, dx, dy)

@@ -5,6 +5,8 @@ except ImportError:
 
 from levelui import LevelUI
 
+import re
+
 class TorpedoAlley:
 	def __init__(self):
 		self.in_queue = Queue()
@@ -61,10 +63,17 @@ class Level:
 		self.level_number = level_number
 
 	def display(self, in_queue, out_queue):
+		self.in_queue = in_queue
+		self.out_queue = out_queue
 		return LevelUI(self.level_number, out_queue, in_queue)
 
 	def handle(self, event):
-		pass
+		if re.match(r'launch (\d+),(\d+)', event):
+			# torpedo launched, we could throttle number here or somesuch
+			# for now, we simply notify the UI to launch it
+			self.out_queue.put(event)
+		else:
+			print event
 
 class Exit:
 	# dummy method, will exit
