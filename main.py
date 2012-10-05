@@ -8,6 +8,7 @@ from levelui import LevelUI
 import re
 import random
 import time
+import math
 from threading import Timer
 
 class TorpedoAlley:
@@ -72,7 +73,8 @@ class Menu:
 class Level:
 	def __init__(self, level_number):
 		self.level_number = level_number
-		self.ship_timer = Timer(0.1, self.possible_ship_appearance, ())
+		self.ship_rate = 1.0/2.0
+		self.ship_timer = Timer(-math.log(random.random())/self.ship_rate, self.ship_appearance, ())
 
 	def cleanup(self):
 		self.ship_timer.cancel()
@@ -95,12 +97,14 @@ class Level:
 		else:
 			print event
 
-	def possible_ship_appearance(self):
-		# TODO use level
-		if random.random() < 0.05:
-			self.out_queue.put("ship")
+	def ship_appearance(self):
+		self.out_queue.put("ship")
 
-		self.ship_timer = Timer(0.2, self.possible_ship_appearance, ())
+		# calculate next appearance - Poisson process
+		U = random.random()
+		nextTime = -math.log(U)/self.ship_rate
+
+		self.ship_timer = Timer(nextTime, self.ship_appearance, ())
 		self.ship_timer.start()
 
 class Exit:
