@@ -1,10 +1,5 @@
-try:
-	from Tkinter import *
-	from Queue import Queue, Empty
-except ImportError:
-	from tkinter import *
-	from queue import Queue, Empty
-
+from Tkinter import *
+from Queue import Queue, Empty
 import tkMessageBox
 
 import threading
