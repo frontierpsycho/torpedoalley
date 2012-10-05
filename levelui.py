@@ -119,23 +119,25 @@ class LevelUI(threading.Thread):
 			self.canvas.delete(torpedo_id)
 
 	def steer(self, direction, speed=2):
-		if self.check_underwater(self.submarine):
-			if direction == "Left":
-				dx, dy = (-speed, 0)
-			elif direction == "Right":
-				dx, dy = (speed, 0)
-			elif direction == "Up":
-				dx, dy = (0, -speed)
-			elif direction == "Down":
-				dx, dy = (0, speed)
-			else:
-				# panic! Just kidding.
-				print "Received", direction,"and don't know how to handle it!"
+		if direction == "Left":
+			dx, dy = (-speed, 0)
+		elif direction == "Right":
+			dx, dy = (speed, 0)
+		elif direction == "Up":
+			dx, dy = (0, -speed)
+		elif direction == "Down":
+			dx, dy = (0, speed)
+		else:
+			# panic! Just kidding.
+			print "Received", direction,"and don't know how to handle it!"
 	
-			self.canvas.move(self.submarine, dx, dy)
+		self.canvas.move(self.submarine, dx, dy)
+		if not self.check_underwater(self.submarine):
+			self.canvas.move(self.submarine, -dx, -dy)
+			self.stopped = True
 	
-			if not self.stopped:
-				self.root.after(30, self.steer, direction, speed)
+		if not self.stopped:
+			self.root.after(30, self.steer, direction, speed)
 
 	### member functions that send events to the main loop ###
 	def launch_send(self, mouseclick):
