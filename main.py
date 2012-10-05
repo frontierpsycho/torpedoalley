@@ -34,6 +34,8 @@ class TorpedoAlley:
 			"level1": { "quit": "exit" }
 		}
 
+		self.total_score = 0
+
 	def change_state(self, transition):
 		self._current_state.cleanup()
 		self._current_state_name = self.current_transitions()[transition]
@@ -56,6 +58,7 @@ class TorpedoAlley:
 				event = self.in_queue.get_nowait()
 
 				if event in self.current_transitions():
+					self.total_score += self._current_state.score
 					self.change_state(event)
 					self.build_ui()
 				else:
@@ -75,6 +78,10 @@ class Level:
 		self.level_number = level_number
 		self.ship_rate = 1.0/3.0
 		self.ship_timer = Timer(-math.log(random.random())/self.ship_rate, self.ship_appearance, ())
+		self.number_of_ships = 0
+		self.max_number_of_ships = 30
+		self.score = 0
+		self.score_per_ship = 50*self.level_number
 
 	def cleanup(self):
 		self.ship_timer.cancel()
@@ -95,7 +102,8 @@ class Level:
 			# for now, we simply notify the UI to launch it
 			self.out_queue.put(event)
 		elif re.match(r'hit (\d+)', event):
-			# TODO increase score, perhaps delete ship
+			self.score += self.score_per_ship
+			print "Score: %d" % self.score
 			self.out_queue.put(event)
 		else:
 			print event
@@ -103,12 +111,17 @@ class Level:
 	def ship_appearance(self):
 		self.out_queue.put("ship")
 
-		# calculate next appearance - Poisson process
-		U = random.random()
-		nextTime = -math.log(U)/self.ship_rate
+		self.number_of_ships += 1
+		if not self.number_of_ships >= self.max_number_of_ships:
+			# calculate next appearance - Poisson process
+			U = random.random()
+			nextTime = -math.log(U)/self.ship_rate
 
-		self.ship_timer = Timer(nextTime, self.ship_appearance, ())
-		self.ship_timer.start()
+			self.ship_timer = Timer(nextTime, self.ship_appearance, ())
+			self.ship_timer.start()
+		else:
+			print "Level complete!"
+
 
 class Exit:
 	# dummy method, will exit
