@@ -16,11 +16,13 @@ import re
 import graphics_helpers
 
 class LevelUI(threading.Thread):
-	def __init__(self, level_number, in_queue, out_queue):
+	def __init__(self, level_number, in_queue, out_queue, starting_score=0):
 		threading.Thread.__init__(self)
 		self.in_queue = in_queue
 		self.out_queue = out_queue
+		self.starting_score = starting_score
 		self.start()
+
 	def run(self):
 		self.root=Tk()
 		self.root.protocol("WM_DELETE_WINDOW", self.destroy_confirm)
@@ -37,7 +39,7 @@ class LevelUI(threading.Thread):
 		self.status_panel.pack()
 
 		self.score_text = StringVar()
-		self.score_text.set("Score: 0")
+		self.score_text.set("Score: %d" % self.starting_score)
 		score_label = Label(self.status_panel, textvariable=self.score_text)
 		score_label.pack()
 
