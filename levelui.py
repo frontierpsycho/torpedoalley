@@ -40,6 +40,9 @@ class LevelUI(threading.Thread):
 		# create submarine and keep it
 		self.submarine = self.canvas.create_rectangle(350, 383, 450, 412, fill="green")
 
+		# explosion image
+		self.explosion = PhotoImage(file="data/explosion.gif")
+
 		# these keypresses are forwarded to steer, the rest go to the game loop
 		self.directions = ["Left", "Right", "Up", "Down"]
 
@@ -128,6 +131,11 @@ class LevelUI(threading.Thread):
 			overlapping_ships = overlapping_objects & ships
 			if overlapping_ships:
 				self.out_queue.put("hit %d" % overlapping_ships.pop())
+				torpedo_center = graphics_helpers.circle_center_from_bbox(5, coords)
+				self.canvas.delete(torpedo_id)
+				kaboom = self.canvas.create_image(torpedo_center[0], torpedo_center[1], image=self.explosion)
+				self.root.after(500, self.canvas.delete, kaboom)
+
 
 			self.root.after(50, self.move_torpedo, *[torpedo_id, dx, dy])
 		else:
