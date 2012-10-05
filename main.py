@@ -5,6 +5,7 @@ except ImportError:
 
 from levelui import LevelUI
 
+import os
 import re
 import random
 import time
@@ -13,7 +14,7 @@ import logging
 import logging.config
 from threading import Timer
 
-logging.config.fileConfig('logs/logging.conf')
+logging.config.fileConfig(os.path.join(os.path.dirname(__file__), "logs") + os.path.sep + "logging.conf")
 logger = logging.getLogger('main')
 
 class TorpedoAlley:

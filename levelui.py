@@ -2,6 +2,7 @@ from Tkinter import *
 from Queue import Queue, Empty
 import tkMessageBox
 
+import os
 import threading
 import operator
 import math
@@ -11,7 +12,7 @@ import logging.config
 
 import graphics_helpers
 
-logging.config.fileConfig('logs/logging.conf')
+logging.config.fileConfig(os.path.join(os.path.dirname(__file__), "logs") + os.path.sep + "logging.conf")
 logger = logging.getLogger('ui')
 
 class LevelUI(threading.Thread):
@@ -51,7 +52,7 @@ class LevelUI(threading.Thread):
 		self.submarine = self.canvas.create_rectangle(350, 383, 450, 412, fill="green")
 
 		# explosion image
-		self.explosion = PhotoImage(file="data/explosion.gif")
+		self.explosion = PhotoImage(file=os.path.join(os.path.dirname(__file__), "data") + os.path.sep + "explosion.gif")
 
 		# these keypresses are forwarded to steer, the rest go to the game loop
 		self.directions = ["Left", "Right", "Up", "Down"]
