@@ -56,8 +56,6 @@ class LevelUI(threading.Thread):
 		if not hasattr(self, "score_text"):
 			self.score_text = StringVar()
 			self.score_text.set("Score: %d" % self.starting_score)
-		else:
-			print self.score_text.get()
 
 		score_label = Label(self.status_panel, textvariable=self.score_text)
 		score_label.pack(side="right")
@@ -108,13 +106,14 @@ class LevelUI(threading.Thread):
 					self.set_score(int(m.group(1)))
 				except ValueError:
 					logger.error("Received new score with invalid value: '%s'" % m.group(1))
-			elif re.match(r'start (\d+)', event):
-				m = re.match(r'start (\d+)', event)
+			elif re.match(r'start (\d+) (\d+)', event):
+				m = re.match(r'start (\d+) (\d+)', event)
 				try:
 					self.level_number = int(m.group(1))
+					self.set_score(int(m.group(2)))
 					self.run()
 				except ValueError:
-					logger.error("Received request to start invalid level: '%s'" % m.group(1))
+					logger.error("Received invalid request to start: '%s'" % event)
 			elif event == "complete":
 				self.completed = True
 		except Empty:

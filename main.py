@@ -55,7 +55,7 @@ class TorpedoAlley:
 		return self._transitions[self._current_state_name]
 
 	def build_ui(self):
-		self._current_state.display()
+		self._current_state.display(self.total_score)
 
 	def run(self):
 		quit = False
@@ -68,8 +68,9 @@ class TorpedoAlley:
 				logger.debug("Received event: %s" % str(event))
 
 				if event in self.current_transitions():
-					self.total_score += self._current_state.score
+					self.total_score = self._current_state.score
 					self.change_state(event)
+
 					if isinstance(self._current_state, Exit):
 						break						
 
@@ -95,7 +96,7 @@ class State:
 		pass
 
 class Level(State):
-	def __init__(self, level_number, in_queue, out_queue):
+	def __init__(self, level_number, in_queue, out_queue, score=0):
 		self.level_number = level_number
 		self.in_queue = in_queue
 		self.out_queue = out_queue
@@ -106,7 +107,7 @@ class Level(State):
 		self.ship_timer = Timer(-math.log(random.random())/self.ship_rate, self.ship_appearance, ())
 		self.number_of_ships = 0
 		self.max_number_of_ships = 2
-		self.score = 0
+		self.score = score
 		self.score_per_ship = 50*self.level_number
 
 		logger.debug("Level %d created." % level_number)
@@ -119,9 +120,8 @@ class Level(State):
 		logger.debug("Cleaning up level %d" % self.level_number)
 		self.ship_timer.cancel()
 
-	def display(self):
-		self.update_score()
-		self.out_queue.put("start %d" % self.level_number)
+	def display(self, score):
+		self.out_queue.put("start %d %d" % (self.level_number, score))
 
 		logger.debug("UI built for level %d" % self.level_number)
 
