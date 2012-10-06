@@ -29,7 +29,7 @@ class TorpedoAlley:
 		self.states = {
 			"level1": [Level, 1, self.in_queue, self.out_queue],
 			"level2": [Level, 2, self.in_queue, self.out_queue],
-			"exit": [Exit]
+			"exit": [Exit, self.out_queue]
 		}
 
 		self._transitions = {
@@ -38,7 +38,7 @@ class TorpedoAlley:
 				"quit": "exit" 
 			},
 			"level2": {
-				"quit": "exit" 
+				"complete": "exit" 
 			}
 		}
 
@@ -70,11 +70,11 @@ class TorpedoAlley:
 				if event in self.current_transitions():
 					self.total_score = self._current_state.score
 					self.change_state(event)
+					self.build_ui()
 
 					if isinstance(self._current_state, Exit):
 						break						
 
-					self.build_ui()
 					self._current_state.begin()
 					logger.debug("Transitioned to state %s" % self._current_state_name)
 				else:
@@ -172,7 +172,10 @@ class Start(State):
 	
 
 class Exit(State):
-	pass
+	def __init__(self, out_queue):
+		self.out_queue = out_queue
+	def display(self, score):
+		self.out_queue.put("destroy")
 
 if __name__ == "__main__":
 	ta = TorpedoAlley()

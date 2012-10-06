@@ -116,6 +116,8 @@ class LevelUI(threading.Thread):
 					logger.error("Received invalid request to start: '%s'" % event)
 			elif event == "complete":
 				self.completed = True
+			elif event == "destroy":
+				self.destroy()
 		except Empty:
 			pass
 		self.root.after(5, self.check_input)
@@ -206,7 +208,10 @@ class LevelUI(threading.Thread):
 	def destroy_confirm(self):
 		if tkMessageBox.askokcancel("Quit", "Do you really wish to quit?"):
 			self.out_queue.put("quit")
-			self.root.destroy()
+			self.destroy()
+
+	def destroy(self):
+		self.root.destroy()
 
 	def move_torpedo(self, torpedo_id, dx, dy):
 		coords = self.canvas.coords(torpedo_id)
