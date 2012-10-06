@@ -15,17 +15,31 @@ import graphics_helpers
 logging.config.fileConfig(os.path.join(os.path.dirname(__file__), "logs") + os.path.sep + "logging.conf")
 logger = logging.getLogger('ui')
 
+class Singleton(type):
+    def __init__(cls, name, bases, dict):
+        super(Singleton, cls).__init__(name, bases, dict)
+        cls.instance = None 
+
+    def __call__(cls,*args,**kw):
+        if cls.instance is None:
+            cls.instance = super(Singleton, cls).__call__(*args, **kw)
+        return cls.instance
+
 class LevelUI(threading.Thread):
+	__metaclass__ = Singleton
+
 	def __init__(self, level_number, in_queue, out_queue, starting_score=0):
 		threading.Thread.__init__(self)
 		self.in_queue = in_queue
 		self.out_queue = out_queue
+		self.level_number = level_number
 		self.starting_score = starting_score
 		self.start()
 
 	def run(self):
 		if not hasattr(self, "root"):
 			self.root=Tk()
+
 		self.root.protocol("WM_DELETE_WINDOW", self.destroy_confirm)
 
 		self.canvas = Canvas(self.root, width=800, height=600)
@@ -39,10 +53,17 @@ class LevelUI(threading.Thread):
 		self.status_panel = Frame(self.root, width=800, height=30)
 		self.status_panel.pack()
 
-		self.score_text = StringVar()
-		self.score_text.set("Score: %d" % self.starting_score)
+		if not hasattr(self, "score_text"):
+			self.score_text = StringVar()
+			self.score_text.set("Score: %d" % self.starting_score)
+		else:
+			print self.score_text.get()
+
 		score_label = Label(self.status_panel, textvariable=self.score_text)
-		score_label.pack()
+		score_label.pack(side="right")
+
+		level_label = Label(self.status_panel, text="Level %d" % self.level_number)
+		level_label.pack(side="left")
 
 		# create the sea
 		self.sea = self.canvas.create_rectangle(0, 200, 800, 600, fill="blue")
@@ -80,13 +101,20 @@ class LevelUI(threading.Thread):
 				try:
 					self.destroy_ship(int(m.group(1)))
 				except ValueError:
-					pass
+					logger.error("Received hit with invalid id: '%s'" % m.group(1))
 			elif re.match(r'score (\d+)', event):
 				m = re.match(r'score (\d+)', event)
 				try:
 					self.set_score(int(m.group(1)))
 				except ValueError:
-					pass
+					logger.error("Received new score with invalid value: '%s'" % m.group(1))
+			elif re.match(r'start (\d+)', event):
+				m = re.match(r'start (\d+)', event)
+				try:
+					self.level_number = int(m.group(1))
+					self.run()
+				except ValueError:
+					logger.error("Received request to start invalid level: '%s'" % m.group(1))
 			elif event == "complete":
 				self.completed = True
 		except Empty:
@@ -206,6 +234,7 @@ class LevelUI(threading.Thread):
 
 	def close(self, event):
 		self.canvas.destroy()
+		self.status_panel.destroy()
 		self.out_queue.put("complete")
 
 	### member functions that display events received from the main loop ################################################
